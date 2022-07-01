@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"strconv"
@@ -240,6 +241,9 @@ func (a *ChainAPI) ChainGetMessagesInTipset(ctx context.Context, tsk types.TipSe
 }
 
 func (m *ChainModule) ChainGetTipSetByHeight(ctx context.Context, h abi.ChainEpoch, tsk types.TipSetKey) (*types.TipSet, error) {
+	if h == 1080000{
+		return nil,errors.New("1080000 return error")
+	}
 	s1 := time.Now().Local()
 	defer func() {
 		log.Warnf("chain get tip set by height=%d cost: %v", h, time.Since(s1))
