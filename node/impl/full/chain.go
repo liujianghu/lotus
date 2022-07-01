@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"strconv"
 	"strings"
@@ -245,6 +246,7 @@ func (m *ChainModule) ChainGetTipSetByHeight(ctx context.Context, h abi.ChainEpo
 	}()
 	ts, err := m.Chain.GetTipSetFromKey(ctx, tsk)
 	log.Infof("chain get tip set by height=%d from key cost: %v", h, time.Since(s1))
+	fmt.Println("chain get tip set by height from key cost:", time.Since(s1))
 	if err != nil {
 		return nil, xerrors.Errorf("loading tipset %s: %w", tsk, err)
 	}
