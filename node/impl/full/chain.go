@@ -242,10 +242,10 @@ func (a *ChainAPI) ChainGetMessagesInTipset(ctx context.Context, tsk types.TipSe
 func (m *ChainModule) ChainGetTipSetByHeight(ctx context.Context, h abi.ChainEpoch, tsk types.TipSetKey) (*types.TipSet, error) {
 	s1 := time.Now().Local()
 	defer func() {
-		log.Infof("chain get tip set by height=%d cost: %v", h, time.Since(s1))
+		log.Warnf("chain get tip set by height=%d cost: %v", h, time.Since(s1))
 	}()
 	ts, err := m.Chain.GetTipSetFromKey(ctx, tsk)
-	log.Infof("chain get tip set by height=%d from key cost: %v", h, time.Since(s1))
+	log.Warnf("chain get tip set by height=%d from key cost: %v", h, time.Since(s1))
 	fmt.Println("chain get tip set by height from key cost:", time.Since(s1))
 	if err != nil {
 		return nil, xerrors.Errorf("loading tipset %s: %w", tsk, err)
