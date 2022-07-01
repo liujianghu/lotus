@@ -5,14 +5,11 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
+	"github.com/filecoin-project/lotus/chain/stmgr"
 	"io"
 	"strconv"
 	"strings"
 	"sync"
-	"time"
-
-	"github.com/filecoin-project/lotus/chain/stmgr"
 
 	"go.uber.org/fx"
 	"golang.org/x/xerrors"
@@ -240,13 +237,7 @@ func (a *ChainAPI) ChainGetMessagesInTipset(ctx context.Context, tsk types.TipSe
 }
 
 func (m *ChainModule) ChainGetTipSetByHeight(ctx context.Context, h abi.ChainEpoch, tsk types.TipSetKey) (*types.TipSet, error) {
-	s1 := time.Now().Local()
-	defer func() {
-		log.Warnf("chain get tip set by height=%d cost: %v", h, time.Since(s1))
-	}()
 	ts, err := m.Chain.GetTipSetFromKey(ctx, tsk)
-	log.Warnf("chain get tip set by height=%d from key cost: %v", h, time.Since(s1))
-	fmt.Println("chain get tip set by height from key cost:", time.Since(s1))
 	if err != nil {
 		return nil, xerrors.Errorf("loading tipset %s: %w", tsk, err)
 	}
