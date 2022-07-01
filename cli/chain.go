@@ -573,6 +573,7 @@ var ChainListCmd = &cli.Command{
 
 		var head *types.TipSet
 
+		log.Infof("chain list height: %v, %d ", cctx.IsSet("height"),cctx.Uint64("height"))
 		if cctx.IsSet("height") {
 			head, err = api.ChainGetTipSetByHeight(ctx, abi.ChainEpoch(cctx.Uint64("height")), types.EmptyTSK)
 		} else {
