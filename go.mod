@@ -169,6 +169,8 @@ require (
 	gotest.tools v2.2.0+incompatible
 )
 
+require github.com/lynkdb/ssdbgo v0.0.0-20191111051101-85e083fd18f7
+
 require (
 	github.com/GeertJohan/go.incremental v1.0.0 // indirect
 	github.com/PuerkitoBio/purell v1.1.1 // indirect

@@ -66,6 +66,13 @@ func (ci *ChainIndex) GetTipsetByHeight(ctx context.Context, from *types.TipSet,
 	i :=0
 	for {
 		cval, ok := ci.skipCache.Get(cur)
+		if !ok{
+			err =ssdb.GetValue(cur.String(),&cval)
+			if err ==nil{
+				ok = true
+				log.Infof("store index: get %d from ssdb", to)
+			}
+		}
 		if !ok {
 			s3 := time.Now()
 			fc, err := ci.fillCache(ctx, cur)
@@ -113,7 +120,8 @@ func (ci *ChainIndex) fillCache(ctx context.Context, tsk types.TipSetKey) (*lbEn
 		return nil, err
 	}
 
-	rheight -= ci.skipLength
+	//rheight -= ci.skipLength
+	rheight -= 1
 	if rheight < 0 {
 		rheight = 0
 	}
@@ -135,6 +143,10 @@ func (ci *ChainIndex) fillCache(ctx context.Context, tsk types.TipSetKey) (*lbEn
 		target:       skipTarget.Key(),
 	}
 	ci.skipCache.Add(tsk, lbe)
+	err =ssdb.SetObject(tsk.String(), lbe)
+	if err != nil {
+		log.Errorf("store index: set ts=%d to ssdb err: %s", ts.Height(), err.Error())
+	}
 
 	return lbe, nil
 }
