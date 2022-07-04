@@ -70,12 +70,12 @@ func (ci *ChainIndex) GetTipsetByHeight(ctx context.Context, from *types.TipSet,
 		}
 		if !ok{
 			var ret lbEntry
-			err =ssdb.GetValue(cur.String(),&ret)
-			if err ==nil && ret.ts != nil &&  ret.targetHeight>0{
+			found ,err := Redis.GetValue(context.TODO(), cur.String(), &ret)
+			if found && err ==nil && ret.ts != nil &&  ret.targetHeight>0{
 				ok = true
 				lbe = &ret
 				if to <1080000{
-					log.Infof("store index: get %d from ssdb", to)
+					log.Infof("store index: get %d from redis", to)
 				}
 			}
 		}
@@ -152,9 +152,9 @@ func (ci *ChainIndex) fillCache(ctx context.Context, tsk types.TipSetKey) (*lbEn
 		target:       skipTarget.Key(),
 	}
 	ci.skipCache.Add(tsk, lbe)
-	err =ssdb.SetObject(tsk.String(), lbe)
+	err = Redis.SetValue(context.TODO(),tsk.String(), lbe,-1)
 	if err != nil {
-		log.Errorf("store index: set ts=%d to ssdb err: %s", ts.Height(), err.Error())
+		log.Errorf("store index: set ts=%d to redis err: %s", ts.Height(), err.Error())
 	}
 
 	return lbe, nil

@@ -169,7 +169,11 @@ require (
 	gotest.tools v2.2.0+incompatible
 )
 
-require github.com/lynkdb/ssdbgo v0.0.0-20191111051101-85e083fd18f7
+require (
+	github.com/go-redis/redis/v8 v8.11.5
+	github.com/json-iterator/go v1.1.12
+	github.com/lynkdb/ssdbgo v0.0.0-20191111051101-85e083fd18f7
+)
 
 require (
 	github.com/GeertJohan/go.incremental v1.0.0 // indirect
@@ -195,6 +199,7 @@ require (
 	github.com/davidlazar/go-crypto v0.0.0-20200604182044-b73af7476f6c // indirect
 	github.com/dgraph-io/ristretto v0.1.0 // indirect
 	github.com/dgryski/go-farm v0.0.0-20190423205320-6a90982ecee2 // indirect
+	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/drand/kyber-bls12381 v0.2.1 // indirect
 	github.com/elastic/go-windows v1.0.0 // indirect
 	github.com/etclabscore/go-jsonschema-walk v0.0.6 // indirect
@@ -295,6 +300,8 @@ require (
 	github.com/mikioh/tcpinfo v0.0.0-20190314235526-30a79bb1804b // indirect
 	github.com/mikioh/tcpopt v0.0.0-20190314235656-172688c1accc // indirect
 	github.com/minio/sha256-simd v1.0.0 // indirect
+	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
+	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/mr-tron/base58 v1.2.0 // indirect
 	github.com/multiformats/go-base36 v0.1.0 // indirect
 	github.com/multiformats/go-multiaddr-fmt v0.1.0 // indirect
