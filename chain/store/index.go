@@ -65,9 +65,11 @@ func (ci *ChainIndex) GetTipsetByHeight(ctx context.Context, from *types.TipSet,
 	for {
 		cval, ok := ci.skipCache.Get(cur)
 		if !ok{
-			err =ssdb.GetValue(cur.String(),&cval)
+			var ret lbEntry
+			err =ssdb.GetValue(cur.String(),&ret)
 			if err ==nil{
 				ok = true
+				cval = ret
 				log.Infof("store index: get %d from ssdb", to)
 			}
 		}
