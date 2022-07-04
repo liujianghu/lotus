@@ -65,13 +65,11 @@ func (ci *ChainIndex) GetTipsetByHeight(ctx context.Context, from *types.TipSet,
 	cur := rounded.Key()
 	i :=0
 	for {
-		s2 := time.Now().Local()
 		cval, ok := ci.skipCache.Get(cur)
-		log.Warnf("index: skipcache get %d cost; %v", i, time.Since(s2))
 		if !ok {
 			s3 := time.Now()
 			fc, err := ci.fillCache(ctx, cur)
-			log.Warnf("idex: fillcache %d cost: %v", i, time.Since(s3))
+			log.Warnf("idex: fillcache i= %d, target=%d parent= %d cost: %v", i, fc.targetHeight, fc.parentHeight, time.Since(s3))
 			if err != nil {
 				return nil, err
 			}
