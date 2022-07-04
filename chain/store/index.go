@@ -55,7 +55,6 @@ func (ci *ChainIndex) GetTipsetByHeight(ctx context.Context, from *types.TipSet,
 		return ci.walkBack(ctx, from, to)
 	}
 
-	s1 := time.Now().Local()
 	rounded, err := ci.roundDown(ctx, from)
 	if err != nil {
 		return nil, err
