@@ -57,7 +57,6 @@ func (ci *ChainIndex) GetTipsetByHeight(ctx context.Context, from *types.TipSet,
 
 	s1 := time.Now().Local()
 	rounded, err := ci.roundDown(ctx, from)
-	log.Warnf("index: get tipset by height=%d rounddown cost: %v", to, time.Since(s1))
 	if err != nil {
 		return nil, err
 	}
@@ -76,7 +75,10 @@ func (ci *ChainIndex) GetTipsetByHeight(ctx context.Context, from *types.TipSet,
 		if !ok {
 			s3 := time.Now()
 			fc, err := ci.fillCache(ctx, cur)
-			log.Warnf("idex: fillcache i= %d, target=%d parent= %d cost: %v", i, fc.targetHeight, fc.parentHeight, time.Since(s3))
+			if to <1080000{
+				log.Warnf("idex: fillcache i= %d, target=%d parent= %d cost: %v", i, fc.targetHeight, fc.parentHeight, time.Since(s3))
+			}
+
 			if err != nil {
 				return nil, err
 			}
