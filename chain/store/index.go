@@ -68,7 +68,7 @@ func (ci *ChainIndex) GetTipsetByHeight(ctx context.Context, from *types.TipSet,
 		if !ok{
 			var ret lbEntry
 			err =ssdb.GetValue(cur.String(),&ret)
-			if err ==nil{
+			if err ==nil && ret.ts != nil &&  ret.targetHeight>0{
 				ok = true
 				lbe = &ret
 				if to <1080000{
