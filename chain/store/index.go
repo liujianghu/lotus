@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"strconv"
+	"time"
 
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/lotus/chain/types"
@@ -54,16 +55,23 @@ func (ci *ChainIndex) GetTipsetByHeight(ctx context.Context, from *types.TipSet,
 		return ci.walkBack(ctx, from, to)
 	}
 
+	s1 := time.Now().Local()
 	rounded, err := ci.roundDown(ctx, from)
+	log.Warnf("index: get tipset by height=%d rounddown cost: %v", to, time.Since(s1))
 	if err != nil {
 		return nil, err
 	}
 
 	cur := rounded.Key()
+	i :=0
 	for {
+		s2 := time.Now().Local()
 		cval, ok := ci.skipCache.Get(cur)
+		log.Warnf("index: skipcache get %d cost; %v", i, time.Since(s2))
 		if !ok {
+			s3 := time.Now()
 			fc, err := ci.fillCache(ctx, cur)
+			log.Warnf("idex: fillcache %d cost: %v", i, time.Since(s3))
 			if err != nil {
 				return nil, err
 			}
@@ -78,6 +86,7 @@ func (ci *ChainIndex) GetTipsetByHeight(ctx context.Context, from *types.TipSet,
 		}
 
 		cur = lbe.target
+		i++
 	}
 }
 

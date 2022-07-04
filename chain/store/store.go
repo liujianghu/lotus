@@ -1166,9 +1166,6 @@ func (cs *ChainStore) GetTipsetByHeight(ctx context.Context, h abi.ChainEpoch, t
 		return lbts, nil
 	}
 
-	defer func() {
-		log.Warnf("store: load tip set=%d cost: %v", h, time.Since(s1))
-	}()
 	return cs.LoadTipSet(ctx, lbts.Parents())
 }
 
