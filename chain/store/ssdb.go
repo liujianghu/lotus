@@ -180,7 +180,7 @@ func (s *ssdbClient) Get(key string) (string, error) {
 }
 func (s *ssdbClient)GetValue(key string, out interface{})error{
 	if !use_ssdb{
-		return nil
+		return ErrNotFound
 	}
 	result := s.conn.Cmd("get", key)
 	if result.Status == ResultOK {
