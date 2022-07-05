@@ -2,12 +2,16 @@ package store
 
 import (
 	"context"
+	"fmt"
+	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-state-types/abi"
+	"github.com/filecoin-project/lotus/chain/actors/builtin"
 	"github.com/filecoin-project/lotus/chain/types"
 	lru "github.com/hashicorp/golang-lru"
 	"golang.org/x/xerrors"
 	"os"
 	"strconv"
+	"time"
 )
 
 var DefaultChainIndexCacheSize = 32 << 10
@@ -64,44 +68,36 @@ func (ci *ChainIndex) GetTipsetByHeight(ctx context.Context, from *types.TipSet,
 		return nil, err
 	}
 
+	var ret LbEntry
+
+	found, err := Redis.GetValue(context.TODO(), fmt.Sprintf("lotus.height.%d", to), &ret)
+	if to < 800000 {
+		if found && ret.Ts != nil{
+			log.Warnf("use redis:%v, to=%d found=%v, ts is nil: %v, height=%d",
+				useRedis, to, found, ret.Ts == nil, ret.Ts.Height())
+		}else{
+			log.Warnf("use redis:%v, to=%d found=%v, ts is nil, target height=%d",
+				useRedis, to, found, ret.TargetHeight)
+		}
+	}
+	if found && err == nil && ret.Ts != nil && ret.Ts.Height() ==to {
+		return ret.Ts, nil
+	}
+
 	cur := rounded.Key()
-	i :=0
+	head := ci.headHeight()
+
 	for {
 		cval, ok := ci.skipCache.Get(cur)
-		var lbe *lbEntry
-		if ok{
-			lbe = cval.(*lbEntry)
-		}
-		if !ok{
-			var ret LbEntry
-
-			found ,err := Redis.GetValue(context.TODO(), cur.String(), &ret)
-			if to<800000{
-				log.Warnf("use redis:%v, key=%s found=%v, ts is nil: %v, height=%d",
-					useRedis, cur.String(), found, ret.Ts == nil, ret.TargetHeight)
-			}
-			if found && err ==nil && ret.Ts != nil &&  ret.TargetHeight>0{
-				ok = true
-				lbe = &lbEntry{
-					ts:           ret.Ts,
-					parentHeight: ret.ParentHeight,
-					targetHeight: ret.TargetHeight,
-					target:       ret.Target,
-				}
-				if to <800000{
-					log.Infof("store index: get %d from redis", to)
-				}
-			}
-		}
 		if !ok {
-			fc, err := ci.fillCache(ctx, cur)
+			fc, err := ci.fillCache(ctx, cur, to, head)
 			if err != nil {
 				return nil, err
 			}
 			cval = fc
-			lbe = cval.(*lbEntry)
 		}
 
+		lbe := cval.(*lbEntry)
 		if lbe.ts.Height() == to || lbe.parentHeight < to {
 			return lbe.ts, nil
 		} else if to > lbe.targetHeight {
@@ -109,15 +105,21 @@ func (ci *ChainIndex) GetTipsetByHeight(ctx context.Context, from *types.TipSet,
 		}
 
 		cur = lbe.target
-		i++
 	}
+}
+
+func (ci *ChainIndex)headHeight()abi.ChainEpoch{
+	if address.CurrentNetwork == 0{
+		return abi.ChainEpoch((time.Now().Local().Unix()-1602773040)/30+148888)
+	}
+	return abi.ChainEpoch((time.Now().Local().Unix()-1624060830)/30+1)
 }
 
 func (ci *ChainIndex) GetTipsetByHeightWithoutCache(ctx context.Context, from *types.TipSet, to abi.ChainEpoch) (*types.TipSet, error) {
 	return ci.walkBack(ctx, from, to)
 }
 
-func (ci *ChainIndex) fillCache(ctx context.Context, tsk types.TipSetKey) (*lbEntry, error) {
+func (ci *ChainIndex) fillCache(ctx context.Context, tsk types.TipSetKey,to, head abi.ChainEpoch) (*lbEntry, error) {
 	ts, err := ci.loadTipSet(ctx, tsk)
 	if err != nil {
 		return nil, err
@@ -138,8 +140,10 @@ func (ci *ChainIndex) fillCache(ctx context.Context, tsk types.TipSetKey) (*lbEn
 		return nil, err
 	}
 
-	//rheight -= ci.skipLength
 	rheight -= 1
+	if to >head-builtin.EpochsInDay*7{
+		rheight -= ci.skipLength
+	}
 	if rheight < 0 {
 		rheight = 0
 	}
@@ -160,19 +164,20 @@ func (ci *ChainIndex) fillCache(ctx context.Context, tsk types.TipSetKey) (*lbEn
 		targetHeight: skipTarget.Height(),
 		target:       skipTarget.Key(),
 	}
-	if ts.Height()>1000000{
-		ci.skipCache.Add(tsk, lbe)
-	}
-	lbe2:=&LbEntry{
-		Ts:           lbe.ts,
-		ParentHeight: lbe.parentHeight,
-		TargetHeight: lbe.targetHeight,
-		Target:       lbe.target,
-	}
 
-	err = Redis.SetValue(context.TODO(),tsk.String(), lbe2,0)
-	if err != nil {
-		log.Errorf("store index: set ts=%d to redis err: %s", ts.Height(), err.Error())
+	if ts.Height() > head-builtin.EpochsInDay*7 {
+		ci.skipCache.Add(tsk, lbe)
+	} else{
+		lbe2 := &LbEntry{
+			Ts:           lbe.ts,
+			ParentHeight: lbe.parentHeight,
+			TargetHeight: lbe.targetHeight,
+			Target:       lbe.target,
+		}
+		err = Redis.SetValue(context.TODO(), fmt.Sprintf("lotus.height.%d", ts.Height()), lbe2, 0)
+		if err != nil {
+			log.Errorf("store index: set ts=%d to redis err: %s", ts.Height(), err.Error())
+		}
 	}
 
 	return lbe, nil
