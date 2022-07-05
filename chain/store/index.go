@@ -66,10 +66,6 @@ func (ci *ChainIndex) GetTipsetByHeight(ctx context.Context, from *types.TipSet,
 
 	head := ci.headHeight()
 	found, err := Redis.GetValue(context.TODO(), fmt.Sprintf("lotus.epoch.%d", to), &ret)
-	if to < 1000000 {
-		log.Warnf("use redis:%v, to=%d found, height=%d, head=%d",
-			useRedis, to, ret.Height(), head)
-	}
 	if found && err == nil && ret.Height() == to {
 		return &ret, nil
 	}
