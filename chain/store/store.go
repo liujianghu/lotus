@@ -1149,7 +1149,10 @@ func (cs *ChainStore) GetTipsetByHeight(ctx context.Context, h abi.ChainEpoch, t
 
 	s1 := time.Now().Local()
 	lbts, err := cs.cindex.GetTipsetByHeight(ctx, ts, h)
-	log.Warnf("store: get tipset by height=%d cost: %v", h, time.Since(s1))
+	if h < 1080000{
+		log.Warnf("store: get tipset by height=%d cost: %v", h, time.Since(s1))
+	}
+
 	if err != nil {
 		return nil, err
 	}

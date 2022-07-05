@@ -70,14 +70,15 @@ func (ci *ChainIndex) GetTipsetByHeight(ctx context.Context, from *types.TipSet,
 
 	var ret LbEntry
 
+	head := ci.headHeight()
 	found, err := Redis.GetValue(context.TODO(), fmt.Sprintf("lotus.height.%d", to), &ret)
-	if to < 800000 {
+	if to < 1000000 {
 		if found && ret.Ts != nil{
-			log.Warnf("use redis:%v, to=%d found=%v, ts is nil: %v, height=%d",
-				useRedis, to, found, ret.Ts == nil, ret.Ts.Height())
+			log.Warnf("use redis:%v, to=%d found=%v, ts is nil: %v, height=%d, head=%d",
+				useRedis, to, found, ret.Ts == nil, ret.Ts.Height(), head)
 		}else{
-			log.Warnf("use redis:%v, to=%d found=%v, ts is nil, target height=%d",
-				useRedis, to, found, ret.TargetHeight)
+			log.Warnf("use redis:%v, to=%d found=%v, ts is nil, target height=%d, head=%d",
+				useRedis, to, found, ret.TargetHeight, head)
 		}
 	}
 	if found && err == nil && ret.Ts != nil && ret.Ts.Height() ==to {
@@ -85,7 +86,7 @@ func (ci *ChainIndex) GetTipsetByHeight(ctx context.Context, from *types.TipSet,
 	}
 
 	cur := rounded.Key()
-	head := ci.headHeight()
+
 
 	for {
 		cval, ok := ci.skipCache.Get(cur)
