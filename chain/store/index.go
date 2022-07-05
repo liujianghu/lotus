@@ -50,6 +50,12 @@ type lbEntry struct {
 	targetHeight abi.ChainEpoch
 	target       types.TipSetKey
 }
+type LbEntry struct {
+	Ts           *types.TipSet
+	ParentHeight abi.ChainEpoch
+	TargetHeight abi.ChainEpoch
+	Target       types.TipSetKey
+}
 
 func (ci *ChainIndex) GetTipsetByHeight(ctx context.Context, from *types.TipSet, to abi.ChainEpoch) (*types.TipSet, error) {
 	if from.Height()-to <= ci.skipLength {
@@ -70,16 +76,21 @@ func (ci *ChainIndex) GetTipsetByHeight(ctx context.Context, from *types.TipSet,
 			lbe = cval.(*lbEntry)
 		}
 		if !ok{
-			var ret lbEntry
+			var ret LbEntry
 
 			found ,err := Redis.GetValue(context.TODO(), cur.String(), &ret)
 			if to<1000000{
 				log.Warnf("use redis:%v, key=%s found=%v, ts is nil: %v, height=%d",
-					useRedis, cur.String(), found, ret.ts == nil, ret.targetHeight)
+					useRedis, cur.String(), found, ret.Ts == nil, ret.TargetHeight)
 			}
-			if found && err ==nil && ret.ts != nil &&  ret.targetHeight>0{
+			if found && err ==nil && ret.Ts != nil &&  ret.TargetHeight>0{
 				ok = true
-				lbe = &ret
+				lbe = &lbEntry{
+					ts:           ret.Ts,
+					parentHeight: ret.ParentHeight,
+					targetHeight: ret.TargetHeight,
+					target:       ret.Target,
+				}
 				if to <1000000{
 					log.Infof("store index: get %d from redis", to)
 				}
@@ -157,16 +168,24 @@ func (ci *ChainIndex) fillCache(ctx context.Context, tsk types.TipSetKey) (*lbEn
 		targetHeight: skipTarget.Height(),
 		target:       skipTarget.Key(),
 	}
-	ci.skipCache.Add(tsk, lbe)
+	if ts.Height()>1000000{
+		ci.skipCache.Add(tsk, lbe)
+	}
+	lbe2:=&LbEntry{
+		Ts:           lbe.ts,
+		ParentHeight: lbe.parentHeight,
+		TargetHeight: lbe.targetHeight,
+		Target:       lbe.target,
+	}
 	if ts.Height()< 900000{
-		val, err := jsoniter.Marshal(lbe)
+		val, err := jsoniter.Marshal(lbe2)
 		if err != nil {
 			log.Errorf("marshal err: %s", err.Error())
 		}else{
-			log.Infof("lbel: %s",string(val))
+			log.Warnf("lbel2: %s",string(val))
 		}
 	}
-	err = Redis.SetValue(context.TODO(),tsk.String(), lbe,0)
+	err = Redis.SetValue(context.TODO(),tsk.String(), lbe2,0)
 	if err != nil {
 		log.Errorf("store index: set ts=%d to redis err: %s", ts.Height(), err.Error())
 	}
