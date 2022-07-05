@@ -51,12 +51,6 @@ type lbEntry struct {
 	targetHeight abi.ChainEpoch
 	target       types.TipSetKey
 }
-type LbEntry struct {
-	Ts           *types.TipSet
-	ParentHeight abi.ChainEpoch
-	TargetHeight abi.ChainEpoch
-	Target       types.TipSetKey
-}
 
 func (ci *ChainIndex) GetTipsetByHeight(ctx context.Context, from *types.TipSet, to abi.ChainEpoch) (*types.TipSet, error) {
 	if from.Height()-to <= ci.skipLength {
@@ -68,21 +62,16 @@ func (ci *ChainIndex) GetTipsetByHeight(ctx context.Context, from *types.TipSet,
 		return nil, err
 	}
 
-	var ret LbEntry
+	var ret types.TipSet
 
 	head := ci.headHeight()
 	found, err := Redis.GetValue(context.TODO(), fmt.Sprintf("lotus.epoch.%d", to), &ret)
 	if to < 1000000 {
-		if found && ret.Ts != nil{
-			log.Warnf("use redis:%v, to=%d found, ts is not nil, height=%d, head=%d",
-				useRedis, to, ret.Ts.Height(), head)
-		}else{
-			log.Warnf("use redis:%v, to=%d found=%v, ts is nil, target height=%d, head=%d",
-				useRedis, to, found, ret.TargetHeight, head)
-		}
+		log.Warnf("use redis:%v, to=%d found, height=%d, head=%d",
+			useRedis, to, ret.Height(), head)
 	}
-	if found && err == nil && ret.Ts != nil && ret.Ts.Height() ==to {
-		return ret.Ts, nil
+	if found && err == nil && ret.Height() == to {
+		return &ret, nil
 	}
 
 	cur := rounded.Key()
@@ -108,11 +97,11 @@ func (ci *ChainIndex) GetTipsetByHeight(ctx context.Context, from *types.TipSet,
 	}
 }
 
-func (ci *ChainIndex)headHeight()abi.ChainEpoch{
-	if address.CurrentNetwork == 0{
-		return abi.ChainEpoch((time.Now().Local().Unix()-1602773040)/30+148888)
+func (ci *ChainIndex) headHeight() abi.ChainEpoch {
+	if address.CurrentNetwork == 0 {
+		return abi.ChainEpoch((time.Now().Local().Unix()-1602773040)/30 + 148888)
 	}
-	return abi.ChainEpoch((time.Now().Local().Unix()-1624060830)/30+1)
+	return abi.ChainEpoch((time.Now().Local().Unix()-1624060830)/30 + 1)
 }
 
 func (ci *ChainIndex) GetTipsetByHeightWithoutCache(ctx context.Context, from *types.TipSet, to abi.ChainEpoch) (*types.TipSet, error) {
@@ -149,12 +138,11 @@ func (ci *ChainIndex) fillCache(ctx context.Context, tsk types.TipSetKey, head a
 	if parent.Height() < rheight {
 		skipTarget = parent
 	} else {
-		skipTarget, err = ci.walkBackToCache(ctx, parent, rheight,head)
+		skipTarget, err = ci.walkBackToCache(ctx, parent, rheight, head)
 		if err != nil {
 			return nil, xerrors.Errorf("fillCache walkback: %w", err)
 		}
 	}
-
 
 	lbe := &lbEntry{
 		ts:           ts,
