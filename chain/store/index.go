@@ -158,7 +158,7 @@ func (ci *ChainIndex) fillCache(ctx context.Context, tsk types.TipSetKey) (*lbEn
 		target:       skipTarget.Key(),
 	}
 	ci.skipCache.Add(tsk, lbe)
-	if ts.Height()== 900000{
+	if ts.Height()< 900000{
 		val, err := jsoniter.Marshal(lbe)
 		if err != nil {
 			log.Errorf("marshal err: %s", err.Error())
