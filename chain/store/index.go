@@ -152,7 +152,7 @@ func (ci *ChainIndex) fillCache(ctx context.Context, tsk types.TipSetKey) (*lbEn
 		target:       skipTarget.Key(),
 	}
 	ci.skipCache.Add(tsk, lbe)
-	err = Redis.SetValue(context.TODO(),tsk.String(), lbe,-1)
+	err = Redis.SetValue(context.TODO(),tsk.String(), lbe,0)
 	if err != nil {
 		log.Errorf("store index: set ts=%d to redis err: %s", ts.Height(), err.Error())
 	}
