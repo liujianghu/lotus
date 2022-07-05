@@ -71,7 +71,7 @@ func (ci *ChainIndex) GetTipsetByHeight(ctx context.Context, from *types.TipSet,
 	var ret LbEntry
 
 	head := ci.headHeight()
-	found, err := Redis.GetValue(context.TODO(), fmt.Sprintf("lotus.height.%d", to), &ret)
+	found, err := Redis.GetValue(context.TODO(), fmt.Sprintf("lotus.epoch.%d", to), &ret)
 	if to < 1000000 {
 		if found && ret.Ts != nil{
 			log.Warnf("use redis:%v, to=%d found, ts is not nil, height=%d, head=%d",
@@ -101,7 +101,7 @@ func (ci *ChainIndex) GetTipsetByHeight(ctx context.Context, from *types.TipSet,
 		if lbe.ts.Height() == to || lbe.parentHeight < to {
 			return lbe.ts, nil
 		} else if to > lbe.targetHeight {
-			return ci.walkBack(ctx, lbe.ts, to)
+			return ci.walkBackToCache(ctx, lbe.ts, to, head)
 		}
 
 		cur = lbe.target
@@ -140,12 +140,7 @@ func (ci *ChainIndex) fillCache(ctx context.Context, tsk types.TipSetKey, head a
 		return nil, err
 	}
 
-
-	if ts.Height() >head-builtin.EpochsInDay*7{
-		rheight -= ci.skipLength
-	}else{
-		rheight -= 1
-	}
+	rheight -= ci.skipLength
 	if rheight < 0 {
 		rheight = 0
 	}
@@ -154,11 +149,12 @@ func (ci *ChainIndex) fillCache(ctx context.Context, tsk types.TipSetKey, head a
 	if parent.Height() < rheight {
 		skipTarget = parent
 	} else {
-		skipTarget, err = ci.walkBack(ctx, parent, rheight)
+		skipTarget, err = ci.walkBackToCache(ctx, parent, rheight,head)
 		if err != nil {
 			return nil, xerrors.Errorf("fillCache walkback: %w", err)
 		}
 	}
+
 
 	lbe := &lbEntry{
 		ts:           ts,
@@ -167,24 +163,7 @@ func (ci *ChainIndex) fillCache(ctx context.Context, tsk types.TipSetKey, head a
 		target:       skipTarget.Key(),
 	}
 
-	if ts.Height() <=1000000{
-		log.Warnf("store index: height=%d, -7d height=%d(%v)",
-			ts.Height(),head-builtin.EpochsInDay*7,ts.Height() > head-builtin.EpochsInDay*7)
-	}
-	if ts.Height() > head-builtin.EpochsInDay*7 {
-		ci.skipCache.Add(tsk, lbe)
-	} else{
-		lbe2 := &LbEntry{
-			Ts:           lbe.ts,
-			ParentHeight: lbe.parentHeight,
-			TargetHeight: lbe.targetHeight,
-			Target:       lbe.target,
-		}
-		err = Redis.SetValue(context.TODO(), fmt.Sprintf("lotus.height.%d", ts.Height()), lbe2, 0)
-		if err != nil {
-			log.Errorf("store index: set ts=%d to redis err: %s", ts.Height(), err.Error())
-		}
-	}
+	ci.skipCache.Add(tsk, lbe)
 
 	return lbe, nil
 }
@@ -220,6 +199,42 @@ func (ci *ChainIndex) walkBack(ctx context.Context, from *types.TipSet, to abi.C
 		pts, err := ci.loadTipSet(ctx, ts.Parents())
 		if err != nil {
 			return nil, err
+		}
+
+		if to > pts.Height() {
+			// in case pts is lower than the epoch we're looking for (null blocks)
+			// return a tipset above that height
+			return ts, nil
+		}
+		if to == pts.Height() {
+			return pts, nil
+		}
+
+		ts = pts
+	}
+}
+
+func (ci *ChainIndex) walkBackToCache(ctx context.Context, from *types.TipSet, to, head abi.ChainEpoch) (*types.TipSet, error) {
+	if to > from.Height() {
+		return nil, xerrors.Errorf("looking for tipset with height greater than start point")
+	}
+
+	if to == from.Height() {
+		return from, nil
+	}
+
+	ts := from
+
+	for {
+		pts, err := ci.loadTipSet(ctx, ts.Parents())
+		if err != nil {
+			return nil, err
+		}
+		if pts.Height() < head-builtin.EpochsInDay*7 {
+			err = Redis.SetValue(context.TODO(), fmt.Sprintf("lotus.epoch.%d", pts.Height()), pts, 0)
+			if err != nil {
+				log.Errorf("store index: set ts=%d to redis err: %s", pts.Height(), err.Error())
+			}
 		}
 
 		if to > pts.Height() {
