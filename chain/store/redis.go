@@ -35,7 +35,7 @@ func init() {
 	}
 
 	if len(ss)>2 {
-		db, err := strconv.Atoi(ss[1])
+		db, err := strconv.Atoi(ss[2])
 		if err != nil {
 			panic(err)
 		}
