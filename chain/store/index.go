@@ -74,8 +74,8 @@ func (ci *ChainIndex) GetTipsetByHeight(ctx context.Context, from *types.TipSet,
 	found, err := Redis.GetValue(context.TODO(), fmt.Sprintf("lotus.height.%d", to), &ret)
 	if to < 1000000 {
 		if found && ret.Ts != nil{
-			log.Warnf("use redis:%v, to=%d found=%v, ts is nil: %v, height=%d, head=%d",
-				useRedis, to, found, ret.Ts == nil, ret.Ts.Height(), head)
+			log.Warnf("use redis:%v, to=%d found, ts is not nil, height=%d, head=%d",
+				useRedis, to, ret.Ts.Height(), head)
 		}else{
 			log.Warnf("use redis:%v, to=%d found=%v, ts is nil, target height=%d, head=%d",
 				useRedis, to, found, ret.TargetHeight, head)
@@ -87,11 +87,10 @@ func (ci *ChainIndex) GetTipsetByHeight(ctx context.Context, from *types.TipSet,
 
 	cur := rounded.Key()
 
-
 	for {
 		cval, ok := ci.skipCache.Get(cur)
 		if !ok {
-			fc, err := ci.fillCache(ctx, cur, to, head)
+			fc, err := ci.fillCache(ctx, cur, head)
 			if err != nil {
 				return nil, err
 			}
@@ -120,7 +119,7 @@ func (ci *ChainIndex) GetTipsetByHeightWithoutCache(ctx context.Context, from *t
 	return ci.walkBack(ctx, from, to)
 }
 
-func (ci *ChainIndex) fillCache(ctx context.Context, tsk types.TipSetKey,to, head abi.ChainEpoch) (*lbEntry, error) {
+func (ci *ChainIndex) fillCache(ctx context.Context, tsk types.TipSetKey, head abi.ChainEpoch) (*lbEntry, error) {
 	ts, err := ci.loadTipSet(ctx, tsk)
 	if err != nil {
 		return nil, err
@@ -141,9 +140,11 @@ func (ci *ChainIndex) fillCache(ctx context.Context, tsk types.TipSetKey,to, hea
 		return nil, err
 	}
 
-	rheight -= 1
-	if to >head-builtin.EpochsInDay*7{
+
+	if ts.Height() >head-builtin.EpochsInDay*7{
 		rheight -= ci.skipLength
+	}else{
+		rheight -= 1
 	}
 	if rheight < 0 {
 		rheight = 0
@@ -166,6 +167,10 @@ func (ci *ChainIndex) fillCache(ctx context.Context, tsk types.TipSetKey,to, hea
 		target:       skipTarget.Key(),
 	}
 
+	if ts.Height() <=1000000{
+		log.Warnf("store index: height=%d, -7d height=%d(%v)",
+			ts.Height(),head-builtin.EpochsInDay*7,ts.Height() > head-builtin.EpochsInDay*7)
+	}
 	if ts.Height() > head-builtin.EpochsInDay*7 {
 		ci.skipCache.Add(tsk, lbe)
 	} else{
