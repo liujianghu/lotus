@@ -70,11 +70,15 @@ func (ci *ChainIndex) GetTipsetByHeight(ctx context.Context, from *types.TipSet,
 		}
 		if !ok{
 			var ret lbEntry
+
 			found ,err := Redis.GetValue(context.TODO(), cur.String(), &ret)
+			if to<1000000{
+				log.Warnf("use redis:%v, found=%v, ts is nil: %v", useRedis, found, ret.ts == nil)
+			}
 			if found && err ==nil && ret.ts != nil &&  ret.targetHeight>0{
 				ok = true
 				lbe = &ret
-				if to <1080000{
+				if to <1000000{
 					log.Infof("store index: get %d from redis", to)
 				}
 			}
@@ -82,7 +86,7 @@ func (ci *ChainIndex) GetTipsetByHeight(ctx context.Context, from *types.TipSet,
 		if !ok {
 			s3 := time.Now()
 			fc, err := ci.fillCache(ctx, cur)
-			if to <1080000{
+			if to <1000000{
 				log.Warnf("idex: fillcache i= %d, target=%d parent= %d cost: %v", i, fc.targetHeight, fc.parentHeight, time.Since(s3))
 			}
 
