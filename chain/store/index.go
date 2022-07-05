@@ -2,15 +2,12 @@ package store
 
 import (
 	"context"
-	jsoniter "github.com/json-iterator/go"
-	"os"
-	"strconv"
-	"time"
-
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/lotus/chain/types"
 	lru "github.com/hashicorp/golang-lru"
 	"golang.org/x/xerrors"
+	"os"
+	"strconv"
 )
 
 var DefaultChainIndexCacheSize = 32 << 10
@@ -79,7 +76,7 @@ func (ci *ChainIndex) GetTipsetByHeight(ctx context.Context, from *types.TipSet,
 			var ret LbEntry
 
 			found ,err := Redis.GetValue(context.TODO(), cur.String(), &ret)
-			if to<1000000{
+			if to<800000{
 				log.Warnf("use redis:%v, key=%s found=%v, ts is nil: %v, height=%d",
 					useRedis, cur.String(), found, ret.Ts == nil, ret.TargetHeight)
 			}
@@ -91,18 +88,13 @@ func (ci *ChainIndex) GetTipsetByHeight(ctx context.Context, from *types.TipSet,
 					targetHeight: ret.TargetHeight,
 					target:       ret.Target,
 				}
-				if to <1000000{
+				if to <800000{
 					log.Infof("store index: get %d from redis", to)
 				}
 			}
 		}
 		if !ok {
-			s3 := time.Now()
 			fc, err := ci.fillCache(ctx, cur)
-			if to <1000000{
-				log.Warnf("idex: fillcache i= %d, target=%d parent= %d cost: %v", i, fc.targetHeight, fc.parentHeight, time.Since(s3))
-			}
-
 			if err != nil {
 				return nil, err
 			}
@@ -177,14 +169,7 @@ func (ci *ChainIndex) fillCache(ctx context.Context, tsk types.TipSetKey) (*lbEn
 		TargetHeight: lbe.targetHeight,
 		Target:       lbe.target,
 	}
-	if ts.Height()< 900000{
-		val, err := jsoniter.Marshal(lbe2)
-		if err != nil {
-			log.Errorf("marshal err: %s", err.Error())
-		}else{
-			log.Warnf("lbel2: %s",string(val))
-		}
-	}
+
 	err = Redis.SetValue(context.TODO(),tsk.String(), lbe2,0)
 	if err != nil {
 		log.Errorf("store index: set ts=%d to redis err: %s", ts.Height(), err.Error())
