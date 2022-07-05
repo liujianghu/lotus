@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	jsoniter "github.com/json-iterator/go"
 	"os"
 	"strconv"
 	"time"
@@ -73,7 +74,8 @@ func (ci *ChainIndex) GetTipsetByHeight(ctx context.Context, from *types.TipSet,
 
 			found ,err := Redis.GetValue(context.TODO(), cur.String(), &ret)
 			if to<1000000{
-				log.Warnf("use redis:%v, found=%v, ts is nil: %v", useRedis, found, ret.ts == nil)
+				log.Warnf("use redis:%v, key=%s found=%v, ts is nil: %v, height=%d",
+					useRedis, cur.String(), found, ret.ts == nil, ret.targetHeight)
 			}
 			if found && err ==nil && ret.ts != nil &&  ret.targetHeight>0{
 				ok = true
@@ -156,6 +158,14 @@ func (ci *ChainIndex) fillCache(ctx context.Context, tsk types.TipSetKey) (*lbEn
 		target:       skipTarget.Key(),
 	}
 	ci.skipCache.Add(tsk, lbe)
+	if ts.Height()== 900000{
+		val, err := jsoniter.Marshal(lbe)
+		if err != nil {
+			log.Errorf("marshal err: %s", err.Error())
+		}else{
+			log.Infof("lbel: %s",string(val))
+		}
+	}
 	err = Redis.SetValue(context.TODO(),tsk.String(), lbe,0)
 	if err != nil {
 		log.Errorf("store index: set ts=%d to redis err: %s", ts.Height(), err.Error())
